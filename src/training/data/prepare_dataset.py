@@ -3,7 +3,7 @@ from sklearn.model_selection import train_test_split
 import json
 from qwen_vl_utils import process_vision_info
 import torch
-from ...training.prompts import EXTRACTION_PROMPT
+from ...model.prompts import EXTRACTION_PROMPT
 from abc import ABC, abstractmethod
 
 
@@ -87,13 +87,13 @@ class BaseQwenCollator(ABC):
                     )
                     for example in examples
                 ]
-        
+
         image_inputs = []
 
         for example in examples:
             img, _ = process_vision_info(example["messages"])
             image_inputs.append(img)
-    
+
         batch = self.processor(
                     text=texts,
                     images=image_inputs,
@@ -114,10 +114,10 @@ class TrainQwenCollator(BaseQwenCollator):
     def __call__(self, examples):
         batch = self._prepare_inputs(examples=examples, add_generation_prompt=False)
         labels = batch['input_ids'].clone()
-        labels[labels == self.processor.tokenizer.pad_token_id] = -100  
+        labels[labels == self.processor.tokenizer.pad_token_id] = -100
         image_token_id = self.processor.tokenizer.convert_tokens_to_ids(self.processor.image_token)
         labels[labels==image_token_id] = -100
-        
+
         assistant_tokens = self.processor.tokenizer.encode("<|im_start|>assistant\n", return_tensors='pt')
         for b in range(len(labels)):
             for el_id in range(len(labels[b])):
@@ -125,7 +125,7 @@ class TrainQwenCollator(BaseQwenCollator):
                     labels[b][:el_id+3] = -100
                     break
         batch['labels'] = labels
-        
+
         return batch
 
 class EvalQwenCollator(BaseQwenCollator):

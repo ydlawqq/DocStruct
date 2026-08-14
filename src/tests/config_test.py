@@ -1,6 +1,6 @@
 import os
 
-from ..model import ModelConfig, LoraConfig, DataConfig, QuantizationConfig, load_config
+from ..training import ModelConfig, LoraConfig, DataConfig, QuantizationConfig, load_config
 
 CONFIG_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),

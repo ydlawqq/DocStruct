@@ -1,1 +1,1 @@
-from .training import load_config, ModelConfig, LoraConfig, DataConfig, QuantizationConfig
+from .prompts import EXTRACTION_PROMPT

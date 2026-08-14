@@ -2,7 +2,7 @@ import torch
 import pytest
 from unittest.mock import MagicMock, patch
 
-from ..model.data.processed.prepare_dataset import (
+from ..training.data.prepare_dataset import (
     TrainQwenCollator,
     EvalQwenCollator,
     BaseQwenCollator,
@@ -117,7 +117,7 @@ class TestBaseQwenCollator:
     def test_prepare_inputs_calls_process_vision_info(self, processor, examples):
         collator = _ConcreteCollator(processor)
         with patch(
-            "src.model.data.processed.prepare_dataset.process_vision_info",
+            "src.training.data.prepare_dataset.process_vision_info",
             return_value=("img", None),
         ) as mock_vision:
             batch = collator._prepare_inputs(examples, add_generation_prompt=False)
@@ -129,7 +129,7 @@ class TestBaseQwenCollator:
     def test_prepare_inputs_calls_processor_once(self, processor, examples):
         collator = _ConcreteCollator(processor)
         with patch(
-            "src.model.data.processed.prepare_dataset.process_vision_info",
+            "src.training.data.prepare_dataset.process_vision_info",
             return_value=("img", None),
         ):
             collator._prepare_inputs(examples, add_generation_prompt=False)
@@ -139,7 +139,7 @@ class TestBaseQwenCollator:
     def test_prepare_inputs_calls_processor_with_correct_args(self, processor, examples):
         collator = _ConcreteCollator(processor)
         with patch(
-            "src.model.data.processed.prepare_dataset.process_vision_info",
+            "src.training.data.prepare_dataset.process_vision_info",
             return_value=("img", None),
         ):
             collator._prepare_inputs(examples, add_generation_prompt=False)
@@ -153,7 +153,7 @@ class TestBaseQwenCollator:
     def test_prepare_inputs_apply_chat_template_false(self, processor, examples):
         collator = _ConcreteCollator(processor)
         with patch(
-            "src.model.data.processed.prepare_dataset.process_vision_info",
+            "src.training.data.prepare_dataset.process_vision_info",
             return_value=("img", None),
         ):
             collator._prepare_inputs(examples, add_generation_prompt=False)
@@ -164,7 +164,7 @@ class TestBaseQwenCollator:
     def test_prepare_inputs_apply_chat_template_true(self, processor, examples):
         collator = _ConcreteCollator(processor)
         with patch(
-            "src.model.data.processed.prepare_dataset.process_vision_info",
+            "src.training.data.prepare_dataset.process_vision_info",
             return_value=("img", None),
         ):
             collator._prepare_inputs(examples, add_generation_prompt=True)
@@ -177,7 +177,7 @@ class TestTrainQwenCollator:
     def test_labels_present(self, processor, examples):
         collator = TrainQwenCollator(processor)
         with patch(
-            "src.model.data.processed.prepare_dataset.process_vision_info",
+            "src.training.data.prepare_dataset.process_vision_info",
             return_value=("img", None),
         ):
             batch = collator(examples)
@@ -188,7 +188,7 @@ class TestTrainQwenCollator:
     def test_pad_tokens_masked(self, processor, examples):
         collator = TrainQwenCollator(processor)
         with patch(
-            "src.model.data.processed.prepare_dataset.process_vision_info",
+            "src.training.data.prepare_dataset.process_vision_info",
             return_value=("img", None),
         ):
             batch = collator(examples)
@@ -202,7 +202,7 @@ class TestTrainQwenCollator:
     def test_image_tokens_masked(self, processor, examples):
         collator = TrainQwenCollator(processor)
         with patch(
-            "src.model.data.processed.prepare_dataset.process_vision_info",
+            "src.training.data.prepare_dataset.process_vision_info",
             return_value=("img", None),
         ):
             batch = collator(examples)
@@ -216,7 +216,7 @@ class TestTrainQwenCollator:
     def test_tokens_before_assistant_masked(self, processor, examples):
         collator = TrainQwenCollator(processor)
         with patch(
-            "src.model.data.processed.prepare_dataset.process_vision_info",
+            "src.training.data.prepare_dataset.process_vision_info",
             return_value=("img", None),
         ):
             batch = collator(examples)
@@ -229,7 +229,7 @@ class TestTrainQwenCollator:
     def test_tokens_after_assistant_not_masked(self, processor, examples):
         collator = TrainQwenCollator(processor)
         with patch(
-            "src.model.data.processed.prepare_dataset.process_vision_info",
+            "src.training.data.prepare_dataset.process_vision_info",
             return_value=("img", None),
         ):
             batch = collator(examples)
@@ -242,7 +242,7 @@ class TestTrainQwenCollator:
     def test_apply_chat_template_add_generation_prompt_false(self, processor, examples):
         collator = TrainQwenCollator(processor)
         with patch(
-            "src.model.data.processed.prepare_dataset.process_vision_info",
+            "src.training.data.prepare_dataset.process_vision_info",
             return_value=("img", None),
         ):
             collator(examples)
@@ -255,7 +255,7 @@ class TestEvalQwenCollator:
     def test_no_labels(self, processor, examples):
         collator = EvalQwenCollator(processor)
         with patch(
-            "src.model.data.processed.prepare_dataset.process_vision_info",
+            "src.training.data.prepare_dataset.process_vision_info",
             return_value=("img", None),
         ):
             batch = collator(examples)
@@ -265,7 +265,7 @@ class TestEvalQwenCollator:
     def test_apply_chat_template_add_generation_prompt_true(self, processor, examples):
         collator = EvalQwenCollator(processor)
         with patch(
-            "src.model.data.processed.prepare_dataset.process_vision_info",
+            "src.training.data.prepare_dataset.process_vision_info",
             return_value=("img", None),
         ):
             collator(examples)

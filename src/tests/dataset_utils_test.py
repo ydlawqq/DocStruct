@@ -1,11 +1,11 @@
 import json
 import pytest
 
-from ..model.data.processed.prepare_dataset import (
+from ..training.data.prepare_dataset import (
     _target_change,
     _make_messages,
 )
-from ..model.training.prompts import EXTRACTION_PROMPT
+from ..model.prompts import EXTRACTION_PROMPT
 
 
 INNER_JSON = {
