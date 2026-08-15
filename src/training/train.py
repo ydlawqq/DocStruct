@@ -4,7 +4,7 @@ from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training, Ta
 import torch
 from transformers import (AutoModelForCausalLM, AutoProcessor, AutoModelForMultimodalLM, BitsAndBytesConfig,
                            Qwen2VLForConditionalGeneration, EarlyStoppingCallback)
-from .config import Config
+from src.model.config import Config
 from .utils import JSONTrainer
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -13,8 +13,8 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 def create_trainer(config: Config):
     bnb_config = None
 
-    if config.quntization.enabled:
-        q = config.quntization
+    if config.quantization.enabled:
+        q = config.quantization
 
         bnb_config = BitsAndBytesConfig(
             load_in_4bit=q.load_in_4bit,

@@ -1,6 +1,6 @@
 import os
 
-from ..training import ModelConfig, LoraConfig, DataConfig, QuantizationConfig, load_config
+from src.model.config import ModelConfig, LoraConfig, DataConfig, QuantizationConfig, load_config
 
 CONFIG_PATH = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
@@ -48,7 +48,7 @@ def test_data_config():
 
 def test_training_config():
     config = load_config(CONFIG_PATH)
-    assert config.training.output_dir == "outputs/qwen2vl-2b"
+    assert config.training.output_dir == "adapters/qwen2vl-2b"
     assert config.training.num_train_epochs == 3
     assert config.training.learning_rate == 2.0e-5
     assert config.training.per_device_train_batch_size == 1
@@ -62,11 +62,11 @@ def test_training_config():
 
 def test_quantization_config():
     config = load_config(CONFIG_PATH)
-    assert config.quntization.enabled is True
-    assert config.quntization.load_in_4bit is True
-    assert config.quntization.quant_type == "nf4"
-    assert config.quntization.compute_dtype == "float16"
-    assert config.quntization.use_double_quant is True
+    assert config.quantization.enabled is True
+    assert config.quantization.load_in_4bit is True
+    assert config.quantization.quant_type == "nf4"
+    assert config.quantization.compute_dtype == "float16"
+    assert config.quantization.use_double_quant is True
 
 
 def test_config_types():
@@ -74,4 +74,4 @@ def test_config_types():
     assert isinstance(config.model, ModelConfig)
     assert isinstance(config.lora, LoraConfig)
     assert isinstance(config.data, DataConfig)
-    assert isinstance(config.quntization, QuantizationConfig)
+    assert isinstance(config.quantization, QuantizationConfig)
