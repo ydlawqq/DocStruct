@@ -9,6 +9,7 @@ requires-python = ">=3.10"
 
 [project.scripts]
 train = "src.training.main:main"
+serve = "src.model.api.serve:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

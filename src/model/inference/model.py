@@ -1,4 +1,5 @@
 import logging
+import os
 
 from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training, TaskType, PeftModel
 import torch
@@ -16,6 +17,12 @@ class VLMModel:
 
     def __init__(self, config: Config, quant: bool =True):
         self.config = config
+
+     
+        if quant and not torch.cuda.is_available():
+            logger.warning("CUDA недоступна: квантование отключено, на CPU гружу float16")
+            quant = False
+
         logger.info("Загрузка модели %s (quant=%s)...", self.config.model.name, quant)
         self.model = self._load_model(quant)
         self.model.eval()
@@ -28,8 +35,12 @@ class VLMModel:
     def _load_model(self, quant: bool = True):
         base_model = self._load_base_model(quant)
 
-        logger.info("Загрузка адаптеров PEFT из %s...", self.config.model.adapters_dir)
-        model = PeftModel.from_pretrained(base_model, self.config.model.adapters_dir)
+        # Абсолютный путь важнее относительного: в контейнере рабочая
+        # директория может отличаться, а относительные пути из YAML
+        # тогда ведут в никуда.
+        adapters_dir = os.getenv("ADAPTERS_DIR", self.config.model.adapters_dir)
+        logger.info("Загрузка адаптеров PEFT из %s...", adapters_dir)
+        model = PeftModel.from_pretrained(base_model, adapters_dir)
         logger.info("Адаптеры PEFT загружены")
         return model
 
@@ -56,12 +67,15 @@ class VLMModel:
             return model
 
         logger.info("Загрузка базовой модели %s (без квантования)...", self.config.model.name)
+
+        torch_dtype = getattr(torch, self.config.model.torch_dtype)
+        if not torch.cuda.is_available() and self.config.model.torch_dtype != "float16":
+            logger.warning("CUDA недоступна: применяю torch_dtype=float16 для CPU-запуска")
+            torch_dtype = torch.float16
+
         model = Qwen2VLForConditionalGeneration.from_pretrained(
             self.config.model.name,
-            torch_dtype=getattr(
-                torch,
-                self.config.model.torch_dtype,
-            ),
+            torch_dtype=torch_dtype,
             device_map="auto",
         )
         logger.info("Базовая модель загружена")

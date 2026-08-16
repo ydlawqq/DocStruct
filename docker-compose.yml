@@ -1,0 +1,39 @@
+services:
+  db:
+    container_name: postgres-db
+    image: postgres:15
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${DB_USER} -d $${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  inference:
+    build: .
+    container_name: qwen-vlm-inference
+    ports:
+      - "8000:8000"
+    environment:
+      CONFIG_PATH: /app/src/configs/qwen2_2b.yaml
+      HF_HOME: /cache/huggingface
+      ADAPTERS_DIR: /app/adapters/qwen2vl-2b
+    volumes:
+      - ./adapters:/app/adapters:z
+      - hf-cache:/cache/huggingface
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  hf-cache:
