@@ -1,11 +1,11 @@
 import argparse
 
 from src.model.config import load_config
-from src.training.train import create_trainer
+from training.train import create_trainer
 from pathlib import Path
 import logging
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
 logger = logging.getLogger(__name__)
 
 

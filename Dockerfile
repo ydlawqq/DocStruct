@@ -22,7 +22,8 @@ RUN pip install --no-cache-dir \
         --extra-index-url ${TORCH_INDEX}
 
 COPY pyproject.toml ./
-COPY src/ ./src/
+COPY src/model/ ./src/model/
+COPY src/configs/ ./src/configs/
 
 RUN pip install --no-cache-dir \
         "fastapi>=0.110" \

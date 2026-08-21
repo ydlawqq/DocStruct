@@ -3,7 +3,7 @@ from sklearn.model_selection import train_test_split
 import json
 from qwen_vl_utils import process_vision_info
 import torch
-from ...model.prompts import EXTRACTION_PROMPT
+from src.model.prompts import EXTRACTION_PROMPT
 from abc import ABC, abstractmethod
 
 

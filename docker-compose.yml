@@ -48,7 +48,14 @@ services:
       - "${CHAINLIT_PORT}:8000"
     environment:
       MODEL_URL: http://inference:8000
+      DB_HOST: db
+      DB_USER: ${DB_USER}
+      DB_PASS: ${DB_PASS}
+      DB_NAME: ${DB_NAME}
+      DB_PORT: 5432
     depends_on:
+      db:
+        condition: service_healthy
       inference:
         condition: service_healthy
     restart: unless-stopped
