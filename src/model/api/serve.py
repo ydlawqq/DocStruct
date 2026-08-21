@@ -6,8 +6,7 @@ import uvicorn
 
 
 def main() -> None:
-    # Логи INFO (загрузка модели и т.п.) направляем в stdout, чтобы
-    # они были видны в `docker logs` / терминале.
+    
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",

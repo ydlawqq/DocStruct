@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASS}
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
@@ -21,7 +21,7 @@ services:
     build: .
     container_name: qwen-vlm-inference
     ports:
-      - "8000:8000"
+      - "${MODEL_PORT}:8000"
     environment:
       CONFIG_PATH: /app/src/configs/qwen2_2b.yaml
       HF_HOME: /cache/huggingface
@@ -32,7 +32,27 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+      start_period: 600s
     restart: unless-stopped
+
+  chainlit:
+    build:
+      context: ./frontend
+    container_name: chainlit-ui
+    ports:
+      - "${CHAINLIT_PORT}:8000"
+    environment:
+      MODEL_URL: http://inference:8000
+    depends_on:
+      inference:
+        condition: service_healthy
+    restart: unless-stopped
+    
 
 volumes:
   pgdata:

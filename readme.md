@@ -2,14 +2,16 @@
 
 Сервис извлечения структурированных данных из чеков и документов на базе мультимодальной модели **Qwen2-VL-2B-Instruct**, дообученной под задачу с помощью **LoRA (QLoRA)**.
 
-Проект состоит из двух независимых частей:
+Проект состоит из трёх независимых частей:
 
 - **Обучение** — дообучение модели на датасете чеков, результат — PEFT-адаптер;
-- **Инференс** — HTTP-сервис на FastAPI, который по изображению возвращает структурированный JSON.
+- **Инференс** — HTTP-сервис на FastAPI, который по изображению возвращает структурированный JSON;
+- **Веб-интерфейс** — чат-бот на Chainlit для загрузки изображений и просмотра результата.
 
 ![Python](https://img.shields.io/badge/Python-3.12-blue)
 ![PyTorch](https://img.shields.io/badge/PyTorch-2.9.1-ee4c2c)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688)
+![Chainlit](https://img.shields.io/badge/Chainlit-latest-7B3FE4)
 ![Docker](https://img.shields.io/badge/Docker-Compose-2496ED)
 
 ---
@@ -22,11 +24,10 @@
 - [Структура проекта](#структура-проекта)
 - [Обучение (QLoRA)](#обучение-qlora)
 - [Быстрый старт (Docker)](#быстрый-старт-docker)
+- [Взаимодействие с Chainlit](#взаимодействие-с-chainlit)
 - [API](#api)
 - [Конфигурация](#конфигурация)
 - [Локальный запуск без Docker](#локальный-запуск-без-docker)
-- [Troubleshooting](#troubleshooting)
-- [Roadmap](#roadmap)
 
 ---
 
@@ -35,6 +36,7 @@
 - Извлечение данных из чеков: на вход — изображение, на выходе — JSON (позиции, суммы, итоги);
 - LoRA-дообучение (QLoRA): 4-bit квантование + low-rank адаптеры, экономия памяти и времени;
 - Инференс как отдельный сервис: FastAPI + асинхронная очередь, независимость от БД;
+- Веб-интерфейс на Chainlit: загрузка изображения через чат, ответ модели прямо в браузере;
 - Совместимость с CPU: автоматический fallback на `float16` при отсутствии CUDA;
 - Готовая конфигурация Docker Compose: подъём сервиса одной командой (CPU/GPU).
 
@@ -52,10 +54,11 @@
 | qwen-vl-utils | 0.0.14                              |
 | TRL (SFTTrainer) | latest                          |
 | FastAPI / Uvicorn | 0.110+ / 0.29+                  |
+| Chainlit      | latest                              |
 | PostgreSQL    | 15 (сервис `db`)                   |
 | Модель        | `Qwen/Qwen2-VL-2B-Instruct`        |
 
-> **Примечание.** Версии зависимостей в `Dockerfile` зафиксированы под локальное окружение. Важно сохранять совместимость пары `transformers` ↔ `qwen-vl-utils` — см. [Troubleshooting](#troubleshooting).
+> **Примечание.** Версии зависимостей в `Dockerfile` зафиксированы под локальное окружение. Важно сохранять совместимость пары `transformers` ↔ `qwen-vl-utils`.
 
 ---
 
@@ -68,12 +71,20 @@
 │  dataset → trainer   │       │  POST /extract                │
 │  → adapters/         │──────>│  └─> InferenceQueue ─> model  │
 └──────────────────────┘       │  └─> JSON-ответ              │
+                               └───────────────┬───────────────┘
+                                               │
+                                               ▼
+                               ┌───────────────────────────────┐
+                               │    Веб-интерфейс (Chainlit)    │
+                               │  загрузка изображения в чат    │
+                               │  → POST /extract → результат   │
                                └───────────────────────────────┘
 ```
 
 - **Обучение** отделено от инференса: результатом обучения является каталог адаптеров (`adapters/qwen2vl-2b`), который инференс подхватывает при старте.
 - **Инференс** — автономный сервис: принимает изображение, возвращает JSON и не выполняет запись в БД (персистентность — ответственность клиента/прослойки).
 - **Очередь** (`InferenceQueue`) выполняет тяжёлую генерацию в отдельном потоке, не блокируя event loop FastAPI.
+- **Chainlit** — веб-интерфейс: пользователь прикрепляет изображение к сообщению, Chainlit отправляет его на `POST /extract` и показывает ответ модели в чате.
 
 ---
 
@@ -101,8 +112,13 @@
 ├── adapters/
 │   └── qwen2vl-2b/                # обученный PEFT-адаптер
 ├── db/                            # работа с PostgreSQL (репозитории)
+├── frontend/                      # веб-интерфейс на Chainlit
+│   ├── app.py                     # обработчики событий чата
+│   ├── client.py                  # HTTP-клиент к инференсу
+│   ├── Dockerfile                 # сборка образа chainlit
+│   └── requirements.txt           # зависимости chainlit
 ├── Dockerfile                     # сборка образа инференса
-├── docker-compose.yml             # сервисы: db + inference
+├── docker-compose.yml             # сервисы: db + inference + chainlit
 └── docker-compose.gpu.yml         # оверлей для NVIDIA GPU
 ```
 
@@ -152,47 +168,59 @@ train --config src/configs/qwen2_2b.yaml
 
 - Docker (или podman) с Compose;
 - для GPU-режима: NVIDIA драйвер + nvidia-container-toolkit;
-- файл `.env` в корне проекта с переменными БД:
+- файл `.env` в корне проекта:
 
 ```env
 DB_HOST=localhost
+DB_USER=ydlawq
+DB_PASS=ydlawq
 DB_PORT=5432
-DB_USER=postgres
-DB_PASS=postgres
-DB_NAME=docstruct
+DB_NAME=mydb
+
+MODEL_PORT=8000
+CHAINLIT_PORT=8001
+
+MODEL_URL=http://inference:8000
 ```
 
-### Вариант 1 — только инференс (CPU)
+### Вариант 1 — весь стек (inference + chainlit, CPU)
 
 ```bash
 cd /home/ydlawq/DocStruct
 docker compose up -d --build --no-deps inference
+docker compose up -d --no-deps chainlit
 ```
 
-### Вариант 2 — только инференс (GPU)
+- `inference` — на `http://localhost:8000`;
+- `chainlit` — на `http://localhost:8001`.
 
-```bash
-cd /home/ydlawq/DocStruct
-docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build --no-deps inference
-```
+> **Примечание.** `--no-deps` используется, чтобы не поднимать сервис `db` (порт 5432 часто занят локальным PostgreSQL). Инференс автономен и в БД не пишет.
 
-### Вариант 3 — весь стек (db + inference)
+### Вариант 2 — весь стек с БД (db + inference + chainlit)
+
+Если хост-порт 5432 свободен (или в `.env` указан свободный `DB_PORT`):
 
 ```bash
 docker compose up -d --build
 ```
 
+### Вариант 3 — только инференс (GPU)
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.gpu.yml up -d --build --no-deps inference
+```
+
 ### Проверка
 
 ```bash
-# статус контейнера — должен быть Up
-docker ps
+# статус контейнеров — должны быть Up
+docker compose ps
 
 # health — отвечает {"status":"ok"} только после полной загрузки модели
 curl localhost:8000/health
 
 # логи загрузки модели
-docker logs -f qwen-vlm-inference
+docker compose logs -f inference
 ```
 
 Ожидаемые строки в логах:
@@ -204,6 +232,45 @@ INFO:src.model.inference.model:Модель полностью загружен�
 ```
 
 > **Примечание.** Повторяющиеся `{"status":"ok"}` в логах — результат работы HEALTHCHECK Docker (каждые 30 секунд), это нормальное поведение.
+
+---
+
+## Взаимодействие с Chainlit
+
+Chainlit — веб-интерфейс в виде чат-бота. Он позволяет загружать изображение чека прямо в браузер и получать результат распознавания от модели.
+
+### Как это работает
+
+1. Пользователь открывает `http://localhost:8001` и отправляет сообщение с прикреплённым изображением чека.
+2. Chainlit (`frontend/app.py`) находит прикреплённое изображение в сообщении.
+3. `frontend/client.py` отправляет его на `POST /extract` сервиса инференса (`MODEL_URL`).
+4. FastAPI обрабатывает изображение через очередь и возвращает JSON.
+5. Chainlit показывает результат в чате.
+
+### Ключевые файлы
+
+| Файл                 | Назначение                                              |
+|----------------------|---------------------------------------------------------|
+| `frontend/app.py`    | Обработчики событий Chainlit (`on_chat_start`, `on_message`) |
+| `frontend/client.py` | HTTP-клиент к инференсу (отправка файла, таймаут 600 с) |
+| `frontend/Dockerfile`| Сборка образа chainlit                                  |
+| `frontend/requirements.txt` | Зависимости: `chainlit`, `httpx`, `python-dotenv` |
+
+### Переменные окружения chainlit
+
+| Переменная   | По умолчанию           | Описание                                   |
+|--------------|------------------------|--------------------------------------------|
+| `MODEL_URL`  | `http://inference:8000`| Базовый URL сервиса инференса              |
+| `CHAINLIT_PORT` | `8001`              | Хост-порт, на котором доступен интерфейс   |
+
+### Использование
+
+1. Убедись, что инференс готов: `curl localhost:8000/health` → `{"status":"ok"}`.
+2. Открой `http://localhost:8001`.
+3. Прикрепи изображение чека к сообщению и отправь.
+4. Дождись ответа — на CPU генерация занимает десятки секунд.
+
+> **Примечание.** Если отправить сообщение без изображения, Chainlit ответит «Пришли фотографию!».
 
 ---
 
@@ -274,19 +341,6 @@ serve --config src/configs/qwen2_2b.yaml --host 0.0.0.0 --port 8000
 | `--host`   | `0.0.0.0`              | Хост привязки                |
 | `--port`   | `8000`                 | Порт                         |
 | `--reload` | —                      | Автоперезагрузка (dev-режим) |
-
----
-
-## Troubleshooting
-
-| Проблема                                                       | Причина                                          | Решение                                                     |
-|----------------------------------------------------------------|--------------------------------------------------|--------------------------------------------------------------|
-| `ModuleNotFoundError: No module named 'torchvision'`           | `qwen_vl_utils` требует torchvision              | Добавить `torchvision==<парная версия>` в `Dockerfile`       |
-| `Could not import module 'BloomPreTrainedModel'`               | Несовместимость `transformers` и `qwen-vl-utils` | Зафиксировать совместимые версии (например `transformers==4.45.2` + `qwen-vl-utils==0.0.8`) |
-| `Can't find 'adapter_config.json' ...`                         | SELinux блокирует bind-mount; относительный путь | В compose использовать `:z` и env `ADAPTERS_DIR=/app/adapters/qwen2vl-2b` |
-| Повторяющийся `{"status":"ok"}` в `docker logs`                | HEALTHCHECK Docker (каждые 30 с)                 | Нормальное поведение, не ошибка                               |
-| `Permission denied` на bind-mount                              | SELinux (контекст `user_home_t` → `container_t`) | Суффикс volume `:z` / `:Z`                                   |
-| Контейнер `inference` не стартует с GPU-секцией                | Нет NVIDIA GPU / nvidia-container-toolkit        | Запускать CPU-вариант без `docker-compose.gpu.yml`            |
 
 ---
 

@@ -21,7 +21,7 @@ def main():
     )
 
     args = parser.parse_args()
-
+ 
     config = load_config(args.config)
     ADAPTER_PATH = PROJECT_ROOT / config.training.output_dir
 

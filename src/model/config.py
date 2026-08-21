@@ -69,11 +69,6 @@ class Config:
 
 
 def load_config(path: Optional[str] = None) -> Config:
-    """Загружает конфиг. Приоритет пути:
-    1. Явно переданный параметр.
-    2. Переменная окружения CONFIG_PATH.
-    3. Дефолтный DEFAULT_CONFIG_PATH.
-    """
     if path is None:
         path = os.getenv("CONFIG_PATH", DEFAULT_CONFIG_PATH)
 
