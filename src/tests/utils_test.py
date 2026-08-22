@@ -3,7 +3,7 @@ import torch
 import pytest
 from unittest.mock import MagicMock, patch
 
-from ..training.utils import (
+from training.utils import (
     is_valid_json,
     calculate_json_valid_rate,
     JSONTrainer,

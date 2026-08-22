@@ -12,9 +12,9 @@ class ReceiptRepo:
 
 
     async def add_receipt(self, **kwargs):
-        id = kwargs.get('id')
-        stmt = insert(Receipt).values(**kwargs).on_conflict_do_update(index_elements=[Receipt.id], set_=
-                                                                      {k: v for k, v in kwargs.items() if k!= 'id'})
+        stmt = insert(Receipt).values(**kwargs)
+        await self.session.execute(stmt)
+        await self.session.commit()
 
 
     async def get_receipts_by_user_id(self, user_id):
