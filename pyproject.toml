@@ -5,15 +5,42 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "docstruct"
 version = "0.1.0"
+description = "Сервис извлечения структурированных данных из чеков на базе Qwen2-VL"
 requires-python = ">=3.10"
+dependencies = [
+    # Инференс (FastAPI)
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "python-multipart",
+    "Pillow>=10.0",
+    "PyYAML",
+    "transformers==5.3.0",
+    "accelerate>=0.33.0",
+    "peft==0.20.0",
+    "bitsandbytes>=0.43.0",
+    "qwen-vl-utils==0.0.14",
+    "sentencepiece",
+    "einops",
+    "datasets",
+    "scikit-learn",
+    "trl",
+    "torch>=2.0",
+    "torchvision>=0.15",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "pytest-asyncio",
+]
 
 [project.scripts]
-train = "src.training.main:main"
+train = "training.main:main"
 serve = "src.model.api.serve:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["src*"]
+include = ["src*", "training*"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

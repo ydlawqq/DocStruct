@@ -42,7 +42,7 @@ services:
 
   chainlit:
     build:
-      context: ./frontend
+      context: ./deployment
     container_name: chainlit-ui
     ports:
       - "${CHAINLIT_PORT}:8000"
